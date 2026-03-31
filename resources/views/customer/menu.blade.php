@@ -61,7 +61,7 @@
                 _token: '{{ csrf_token() }}'
             },
             success: function(response){
-                if(response.status == 'success'){
+                if(response.success){
                     alert(response.message);
                 } else {
                     alert('Gagal: ' + response.message);
