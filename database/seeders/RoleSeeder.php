@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -20,6 +19,11 @@ class RoleSeeder extends Seeder
             ['role_name' => 'customer', 'description' => 'pelanggan'],
         ];
 
-        DB::table('roles')->insert($roles);
+        foreach ($roles as $role) {
+            DB::table('roles')->updateOrInsert(
+                ['role_name' => $role['role_name']], 
+                ['description' => $role['description']]
+            );
+        }
     }
 }

@@ -13,6 +13,10 @@ class ItemSeeder extends Seeder
      */
     public function run(): void
     {
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+        Item::truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+
         Item::factory()->count(10)->create();
     }
 }

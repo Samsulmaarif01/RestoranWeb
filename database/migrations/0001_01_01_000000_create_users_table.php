@@ -21,7 +21,7 @@ return new class extends Migration
             $table->unsignedBigInteger('role_id');
             $table->softDeletes();
             $table->timestamps();
-
+            
             $table->foreign('role_id')->references('id')->on('roles');
         });
 
