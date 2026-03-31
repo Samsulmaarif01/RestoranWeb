@@ -41,29 +41,6 @@
                                 </div>
                             </div>
                             @endforeach
-
-                            @section('script')
-                            <script>
-                                function addToCart(menuId){
-                                    $.ajax({
-                                        url: '{{ route("cart.add") }}',
-                                        type: 'POST',
-                                        data: {
-                                            id: menuId,
-                                            _token: '{{ csrf_token() }}'
-                                        },
-                                        success: function(response){
-                                            if(response.status == 'success'){
-                                                alert(response.message);
-                                            }
-                                        }
-                                        catch(error){
-                                            console.log('Error: ' + error);
-                                        }
-                                    });
-                                }
-                            </script>
-                            @endsection
                         </div>
                     </div>
                 </div>
@@ -71,4 +48,29 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('script')
+<script>
+    function addToCart(menuId){
+        $.ajax({
+            url: '{{ route("cart.add") }}',
+            type: 'POST',
+            data: {
+                id: menuId,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response){
+                if(response.status == 'success'){
+                    alert(response.message);
+                } else {
+                    alert('Gagal: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error){
+                console.log('Error: ' + error);
+            }
+        });
+    }
+</script>
 @endsection

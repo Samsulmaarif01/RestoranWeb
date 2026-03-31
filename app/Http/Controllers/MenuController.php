@@ -64,7 +64,7 @@ class MenuController extends Controller
                 'id' => $menu->id,
                 'name' => $menu->name,
                 'price' => $menu->price,
-                'image' => $menu->img,
+                'image' => (str_starts_with($menu->image, 'http') ? $menu->image : asset('img_item_upload/' . $menu->image)),
                 'quantity' => 1,
             ];
         }
