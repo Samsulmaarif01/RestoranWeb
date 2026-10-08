@@ -11,13 +11,19 @@
                                 <div class="col-md-12 col-lg-6">
                                     <div class="form-item w-100">
                                         <label class="form-label my-3">Nama Lengkap<sup>*</sup></label>
-                                        <input type="text" class="form-control" disabled required>
+                                        <input type="text" class="form-control" name="full_name" required>
                                     </div>
                                 </div>
                                 <div class="col-md-12 col-lg-6">
                                     <div class="form-item w-100">
                                         <label class="form-label my-3">Nomor WhatsApp<sup>*</sup></label>
-                                        <input type="text" class="form-control" disabled required>
+                                        <input type="text" class="form-control" name="whatsapp_number" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-12 col-lg-6">
+                                    <div class="form-item w-100">
+                                        <label class="form-label my-3">Nomor Meja<sup>*</sup></label>
+                                        <input type="number" class="form-control" name="table_number" required>
                                     </div>
                                 </div>
                             </div>   
@@ -113,7 +119,7 @@
                                                     <label class="form-check-label" for="qris">QRIS</label>
                                                 </div>
                                                 <div class="form-check">
-                                                    <input type="radio" class="form-check-input bg-primary border-0" id="cash" name="payment" value="tunai">
+                                                    <input type="radio" class="form-check-input bg-primary border-0" id="cash" name="payment" value="tunai" checked>
                                                     <label class="form-check-label" for="cash">Tunai</label>
                                                 </div>
                                             </div>
@@ -121,8 +127,9 @@
                                     </div>
 
                                     <div class="d-flex justify-content-end">
-                                        <button type="button" class="btn border-secondary py-3 text-uppercase text-primary">Konfirmasi Pesanan</button> 
+                                        <button type="button" class="btn border-secondary py-3 text-uppercase text-primary" onclick="checkoutOrder()">Konfirmasi Pesanan</button> 
                                     </div>
+                                    <div id="checkoutMessage" class="mt-3"></div>
                                     
                                 </div>
                             </div>
@@ -131,4 +138,64 @@
                 </form>
             </div>
         </div>
+@endsection
+
+@section('script')
+    <script>
+        function checkoutOrder() {
+            const fullName = document.querySelector('input[name="full_name"]').value;
+            const whatsappNumber = document.querySelector('input[name="whatsapp_number"]').value;
+            const tableNumber = document.querySelector('input[name="table_number"]').value;
+            const paymentMethod = document.querySelector('input[name="payment"]:checked');
+            const messageEl = document.getElementById('checkoutMessage');
+            messageEl.innerHTML = '';
+            
+            if (!fullName || !whatsappNumber || !tableNumber) {
+                alert('Mohon isi Nama Lengkap, Nomor WhatsApp, dan Nomor Meja');
+                return;
+            }
+            
+            if (!paymentMethod) {
+                alert('Mohon pilih metode pembayaran');
+                return;
+            }
+            
+            const orderData = {
+                full_name: fullName,
+                whatsapp_number: whatsappNumber,
+                table_number: tableNumber,
+                payment_method: paymentMethod.value,
+                notes: document.querySelector('textarea')?.value || ''
+            };
+            
+            fetch("{{ route('checkout.process') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(async response => {
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = null;
+                }
+
+                if (response.ok && data && data.success) {
+                    window.location.href = '/checkout/success/' + data.order_code;
+                } else {
+                    const message = (data && data.message) ? data.message : 'Terjadi kesalahan saat memproses pesanan';
+                    messageEl.innerHTML = '<div class="alert alert-danger">' + message + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                messageEl.innerHTML = '<div class="alert alert-danger">Terjadi kesalahan saat memproses pesanan</div>';
+            });
+        }
+    </script>
 @endsection

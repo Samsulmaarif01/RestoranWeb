@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\DB;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Item;
 
 class MenuController extends Controller
@@ -123,4 +126,101 @@ class MenuController extends Controller
         session()->forget('cart');
         return redirect()->route('cart')->with('success', 'Keranjang berhasil dikosongkan');
     }
+    
+    public function processCheckout(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'full_name' => 'required|string|max:255',
+            'whatsapp_number' => 'required|string|max:20',
+            'table_number' => 'required|integer|min:1',
+            'payment_method' => 'required|in:tunai,qris',
+            'notes' => 'nullable|string',
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+        
+        $cart = session()->get('cart', []);
+        if (empty($cart)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Keranjang kosong'
+            ], 400);
+        }
+        
+        // Calculate totals
+        $subtotal = 0;
+        foreach ($cart as $item) {
+            $itemTotal = $item['price'] * $item['quantity'];
+            $subtotal += $itemTotal;
+        }
+        
+        $tax = $subtotal * 0.1;
+        $grandTotal = $subtotal + $tax;
+        
+        // Generate order code
+        $orderCode = 'ORD-' . date('Ymd') . '-' . strtoupper(substr(md5(rand()), 0, 6));
+        
+        try {
+            // Create order (DBTransaction: order + order_items must be atomic)
+            DB::transaction(function () use ($request, $cart, $subtotal, $tax, $grandTotal, $orderCode) {
+                $order = Order::create([
+                    'order_code' => $orderCode,
+                    'user_id' => auth()->id() ?? 1,
+                    'subtotal' => $subtotal,
+                    'tax' => $tax,
+                    'grand_total' => $grandTotal,
+                    'status' => 'pending',
+                    'table_number' => $request->table_number,
+                    'payment_method' => $request->payment_method,
+                    'notes' => $request->notes,
+                ]);
+
+                foreach ($cart as $item) {
+                    $itemTotal = $item['price'] * $item['quantity'];
+
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'item_id' => $item['id'],
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price'],
+                        'tax' => (int) round($itemTotal * 0.1),
+                        'total_price' => $itemTotal + (int) round($itemTotal * 0.1),
+                    ]);
+                }
+            });
+
+            // Clear cart
+            session()->forget('cart');
+
+            return response()->json([
+                'success' => true,
+                'order_code' => $orderCode,
+                'message' => 'Pesanan berhasil dibuat'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Checkout error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memproses pesanan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function checkoutSuccess($orderId)
+    {
+        $order = Order::where('order_code', $orderId)->first();
+
+        if (!$order) {
+            return redirect()->route('menu')->with('error', 'Pesanan tidak ditemukan');
+        }
+        $orderItems = OrderItem::where('order_id', $order->id)->get();
+
+        return view('customer.success', compact('order', 'orderItems'));
+    }
+
 }

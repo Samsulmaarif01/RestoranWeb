@@ -22,3 +22,6 @@ Route::get('/cart/clear', [MenuController::class, 'clearCart'])->name('cart.clea
 Route::get('/checkout', function () {
     return view('customer.checkout');
 })->name('checkout');
+
+Route::get('/checkout/success/{order_code}', [MenuController::class, 'checkoutSuccess'])->name('checkout.success');
+Route::post('/checkout/process', [MenuController::class, 'processCheckout'])->name('checkout.process');
